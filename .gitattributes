@@ -1,0 +1,3 @@
+# The optimization scripts must stay byte-for-byte as provided, line endings included.
+scripts/** -text
+*.png binary

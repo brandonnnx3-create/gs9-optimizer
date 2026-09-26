@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>ConnectionOptimizer</AssemblyName>
+    <RootNamespace>ConnectionOptimizer</RootNamespace>
+    <Product>Connection Optimizer</Product>
+    <Company>G.S.9</Company>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <!-- The scripts stay external: they are copied next to the executable (Scripts\) and run from there.
+       Replacing a file in Scripts\ changes the behavior without rebuilding the app. -->
+  <ItemGroup>
+    <None Include="..\..\scripts\*.bat;..\..\scripts\*.cmd"
+          Link="Scripts\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

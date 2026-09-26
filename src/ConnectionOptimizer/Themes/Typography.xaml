@@ -1,0 +1,89 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/ConnectionOptimizer;component/Themes/Tokens.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Brand mark: "G.S.9". Used once per screen. -->
+    <Style x:Key="Text.Hero" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Hero}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="60"/>
+    </Style>
+
+    <!-- Large state value (SYSTEM STATUS). -->
+    <Style x:Key="Text.Display" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Display}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+    </Style>
+
+    <!-- Key technical figure (ETHERNET, 1 GBPS, 2 / 5). -->
+    <Style x:Key="Text.Figure" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Figure}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Tool name. -->
+    <Style x:Key="Text.Title" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Title}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="LineStackingStrategy" Value="BlockLineHeight"/>
+        <Setter Property="LineHeight" Value="22"/>
+    </Style>
+
+    <!-- Section title (NETWORK, CLEANUP, ACTIVITY). Use with Tracking. -->
+    <Style x:Key="Text.Section" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Display}"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Section}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+    </Style>
+
+    <!-- Small uppercase label above a value. Use with Tracking. -->
+    <Style x:Key="Text.Label" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Text}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Label}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+    </Style>
+
+    <!-- Running text: descriptions and explanations. -->
+    <Style x:Key="Text.Body" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Text}"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Body}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- Plain value next to a label. -->
+    <Style x:Key="Text.Value" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Text}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Technical detail: exit codes, times, output lines. -->
+    <Style x:Key="Text.Mono" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Mono}"/>
+        <Setter Property="FontSize" Value="{StaticResource Type.Mono}"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}"/>
+    </Style>
+
+    <!-- Technical value: addresses, identifiers. -->
+    <Style x:Key="Text.MonoValue" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Mono}"/>
+        <Setter Property="FontSize" Value="16"/>
+        <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+</ResourceDictionary>
