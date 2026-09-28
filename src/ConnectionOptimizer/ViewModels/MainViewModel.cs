@@ -29,6 +29,8 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
     private readonly DispatcherTimer _clock;
     private readonly DispatcherTimer _networkDebounce;
     private readonly HashSet<OptimizationViewModel> _verifiedSinceLastRun = [];
+    private readonly HashSet<IntPtr> _announcedWindows = [];
+    private readonly string? _licensedTo;
 
     private bool _isBusy;
     private SystemState _systemState = SystemState.Ready;
@@ -44,15 +46,18 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
     private bool _refreshingConnection;
     private bool _refreshAgain;
     private string? _lastConnectionKey;
+    private bool _watchingWindows;
 
     public MainViewModel(
         ScriptRunner runner,
         ScriptVerifier verifier,
         NetworkInfoService network,
         IUiService ui,
-        ActivityLogViewModel activity)
+        ActivityLogViewModel activity,
+        string? licensedTo = null)
     {
         _runner = runner;
+        _licensedTo = licensedTo;
         _verifier = verifier;
         _network = network;
         _ui = ui;
@@ -107,6 +112,7 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
 
     public string FooterText =>
         $"G.S.9 CONNECTION OPTIMIZER  v{Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3)}" +
+        (_licensedTo is null ? string.Empty : $"      LICENSED TO  {_licensedTo}") +
         $"      SCRIPTS  {_runner.ScriptsDirectory}";
 
     public string NetworkCount => $"{NetworkModules.Count:00} TOOLS";
@@ -279,6 +285,14 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         }
     }
 
+    public void ShowScriptWindow(OptimizationViewModel module)
+    {
+        if (module.OpenWindow is { } window)
+        {
+            ScriptWindows.BringToFront(window.Handle);
+        }
+    }
+
     public void ViewLog(OptimizationViewModel module)
     {
         if (module.LastLog is { } run)
@@ -441,6 +455,7 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         _runningModule = module;
         _runningSince = DateTime.Now;
         _verifiedSinceLastRun.Clear();
+        _announcedWindows.Clear();
         module.MarkRunning();
         SystemDetail = $"Running {module.Name}…";
         Activity.Info($"{module.Name} started · {module.Definition.ScriptFile}");
@@ -641,7 +656,53 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         module.UpdateElapsed(elapsed);
         if (IsBatchRunning)
         {
-            BatchCurrent = $"{module.Name}  ·  RUNNING  {Format.Elapsed(elapsed)}";
+            BatchCurrent = module.OpenWindow is { } window
+                ? $"{module.Name}  ·  WINDOW OPEN  ·  {window.Title}"
+                : $"{module.Name}  ·  RUNNING  {Format.Elapsed(elapsed)}";
+        }
+
+        _ = WatchScriptWindowsAsync(module);
+    }
+
+    /// <summary>
+    /// Some scripts open windows that wait for the user (Disk Cleanup settings). Detect them,
+    /// bring them to the front once and say so, instead of showing a script that looks frozen.
+    /// </summary>
+    private async Task WatchScriptWindowsAsync(OptimizationViewModel module)
+    {
+        if (_watchingWindows || _runner.RunningProcessId is not int processId)
+        {
+            return;
+        }
+
+        _watchingWindows = true;
+        try
+        {
+            IReadOnlyList<ScriptWindow> windows = await Task.Run(() => ScriptWindows.Find(processId));
+            if (_runningModule != module)
+            {
+                return; // The script finished while looking.
+            }
+
+            ScriptWindow? window = windows.FirstOrDefault();
+            module.SetOpenWindow(window);
+            SystemDetail = window is null
+                ? $"Running {module.Name}…"
+                : $"{module.Name} is waiting on a window: \"{window.Title}\". It may need your input.";
+
+            if (window is not null && _announcedWindows.Add(window.Handle))
+            {
+                Activity.Warning($"{module.Name} opened a window · \"{window.Title}\" ({window.ProcessName}) · it may need your input");
+                ScriptWindows.BringToFront(window.Handle);
+            }
+        }
+        catch (Exception)
+        {
+            // Best effort: failing to inspect windows must never affect the running script.
+        }
+        finally
+        {
+            _watchingWindows = false;
         }
     }
 

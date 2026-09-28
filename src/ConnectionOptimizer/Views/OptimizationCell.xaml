@@ -57,12 +57,19 @@
                    ToolTip="{Binding LiveOutput}"
                    Visibility="{Binding LiveOutput, Converter={StaticResource Visibility}}"/>
 
-        <WrapPanel Grid.Row="7" Margin="0,18,0,0">
+        <WrapPanel Grid.Row="7" Margin="0,18,0,-8">
+            <!-- Only while the script has a window open that may be waiting for the user. -->
             <Button Style="{StaticResource Button.Secondary}"
-                    Margin="0,0,8,0"
+                    Margin="0,0,8,8"
+                    Content="{m:Tracked 'SHOW WINDOW'}"
+                    Command="{Binding ShowWindowCommand}"
+                    Visibility="{Binding HasOpenWindow, Converter={StaticResource Visibility}}"/>
+            <Button Style="{StaticResource Button.Secondary}"
+                    Margin="0,0,8,8"
                     Content="{m:Tracked ACTIVATE}"
                     Command="{Binding ActivateCommand}"/>
             <Button Style="{StaticResource Button.Secondary}"
+                    Margin="0,0,0,8"
                     Content="{m:Tracked 'CHECK STATUS'}"
                     Command="{Binding CheckStatusCommand}"
                     Visibility="{Binding HasVerifier, Converter={StaticResource Visibility}}"/>

@@ -95,6 +95,7 @@ Main screen hierarchy:
 |---|---|---|---|
 | Ready | ● | READY | white |
 | Running / Optimizing | ● (pulsing) | RUNNING… / OPTIMIZING | white |
+| Waiting on a window | ◆ (pulsing) | WINDOW OPEN | white |
 | Checking | ● (pulsing) | CHECKING… | gray |
 | Applied (exit 0, not verifiable) | ✓ | APPLIED | green glyph |
 | Completed | ● | COMPLETED | green glyph |
@@ -129,6 +130,8 @@ Disabled buttons turn to line-gray outlines. Keyboard focus is a dashed white fr
 **Alert strip:** a 4 px red bar on the left, `✕ OPTIMIZATION FAILED` plus the subject, a readable sentence, the technical detail in mono, then VIEW LOG and DISMISS. Never a modal pop-up for an error.
 
 **Activity:** mono timestamp · glyph · message. Info messages in gray, results in white, errors in red.
+
+**Lock screen** (`Views/LockWindow`): the brand, `THIS PC IS NOT AUTHORIZED`, the hardware ID in large mono inside a white frame with COPY, and LOAD LICENSE as the only primary button. It shows red text only when a license was rejected. A missing license is a normal first run, not an error.
 
 **Dialogs:** black window with a native dark title bar. Contents top to bottom: label, big title, message, optional list, "WHAT WILL HAPPEN", optional boxed note, then CANCEL (secondary) and the confirm button (primary).
 

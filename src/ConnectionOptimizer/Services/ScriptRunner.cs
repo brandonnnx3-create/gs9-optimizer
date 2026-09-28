@@ -18,6 +18,7 @@ public sealed class ScriptRunner
     private static readonly Encoding ConsoleEncoding = CreateConsoleEncoding();
 
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private volatile int _runningProcessId;
 
     public ScriptRunner(string scriptsDirectory, string logsDirectory)
     {
@@ -27,6 +28,9 @@ public sealed class ScriptRunner
 
     public string ScriptsDirectory { get; }
     public string LogsDirectory { get; }
+
+    /// <summary>Process id of the cmd.exe running the current script, or null when idle.</summary>
+    public int? RunningProcessId => _runningProcessId == 0 ? null : _runningProcessId;
 
     public bool Exists(string scriptFile) => File.Exists(ResolvePath(scriptFile));
 
@@ -111,6 +115,8 @@ public sealed class ScriptRunner
             return ScriptRunResult.NotStarted(scriptFile, $"Could not start cmd.exe: {ex.Message}");
         }
 
+        _runningProcessId = process.Id;
+
         // Every script ends with PAUSE. Closing stdin gives it end-of-input, so it returns instead of waiting for a key.
         process.StandardInput.Close();
         process.BeginOutputReadLine();
@@ -130,6 +136,7 @@ public sealed class ScriptRunner
             }
         }
 
+        _runningProcessId = 0;
         await DrainOutputAsync(process).ConfigureAwait(false);
         stopwatch.Stop();
 

@@ -5,6 +5,7 @@ public enum StatusKind
 {
     Ready,
     Running,
+    Waiting,
     Optimizing,
     Checking,
     Applied,

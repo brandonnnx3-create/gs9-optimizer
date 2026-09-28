@@ -62,6 +62,7 @@ public partial class StatusBadge : UserControl
         (string glyph, string glyphBrush, string textBrush, bool pulse) = Kind switch
         {
             StatusKind.Running or StatusKind.Optimizing => ("●", "Brush.Text", "Brush.Text", true),
+            StatusKind.Waiting => ("◆", "Brush.Text", "Brush.Text", true),
             StatusKind.Checking => ("●", "Brush.TextSecondary", "Brush.TextSecondary", true),
             StatusKind.Applied => ("✓", "Brush.Ok", "Brush.Text", false),
             StatusKind.Completed or StatusKind.Active => ("●", "Brush.Ok", "Brush.Text", false),

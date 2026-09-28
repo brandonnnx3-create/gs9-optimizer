@@ -12,6 +12,8 @@ public interface IOptimizationHost
 
     Task CheckStatusAsync(OptimizationViewModel module);
 
+    void ShowScriptWindow(OptimizationViewModel module);
+
     void ViewLog(OptimizationViewModel module);
 }
 
@@ -39,6 +41,7 @@ public sealed class OptimizationViewModel : ObservableObject
     private ScriptRunResult? _lastLog;
     private string _lastLogKind = string.Empty;
     private bool _lastLogIsError;
+    private ScriptWindow? _openWindow;
 
     public OptimizationViewModel(
         OptimizationDefinition definition,
@@ -59,6 +62,7 @@ public sealed class OptimizationViewModel : ObservableObject
             () => host.CheckStatusAsync(this),
             () => HasVerifier && IsVerifierAvailable && !host.IsBusy);
         ViewLogCommand = new RelayCommand(() => host.ViewLog(this), () => HasLog);
+        ShowWindowCommand = new RelayCommand(() => host.ShowScriptWindow(this), () => OpenWindow is not null);
     }
 
     public OptimizationDefinition Definition { get; }
@@ -73,6 +77,24 @@ public sealed class OptimizationViewModel : ObservableObject
     public ICommand ActivateCommand { get; }
     public ICommand CheckStatusCommand { get; }
     public ICommand ViewLogCommand { get; }
+    public ICommand ShowWindowCommand { get; }
+
+    /// <summary>A window opened by the running script (it may be waiting for the user).</summary>
+    public ScriptWindow? OpenWindow
+    {
+        get => _openWindow;
+        private set
+        {
+            if (SetProperty(ref _openWindow, value))
+            {
+                OnPropertyChanged(nameof(HasOpenWindow));
+                RaiseStatusChanged();
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public bool HasOpenWindow => _openWindow is not null;
 
     /// <summary>Last meaningful line printed by the running script.</summary>
     public string? LiveOutput
@@ -115,8 +137,17 @@ public sealed class OptimizationViewModel : ObservableObject
         OnPropertyChanged(nameof(StatusCaption));
     }
 
+    internal void SetOpenWindow(ScriptWindow? window)
+    {
+        if (_runState == RunState.Running || window is null)
+        {
+            OpenWindow = window;
+        }
+    }
+
     internal void MarkRunFinished(ScriptRunResult result)
     {
+        OpenWindow = null;
         _lastRun = result;
         _runState = result.Succeeded ? RunState.Applied : RunState.Error;
         _showRunError = !result.Succeeded;
@@ -154,7 +185,9 @@ public sealed class OptimizationViewModel : ObservableObject
 
         if (_runState == RunState.Running)
         {
-            return (StatusKind.Running, "RUNNING…", $"elapsed {Format.Elapsed(_elapsed)}");
+            return _openWindow is { } window
+                ? (StatusKind.Waiting, "WINDOW OPEN", $"\"{window.Title}\" may need your input · {Format.Elapsed(_elapsed)}")
+                : (StatusKind.Running, "RUNNING…", $"elapsed {Format.Elapsed(_elapsed)}");
         }
 
         if (_isChecking)

@@ -4,3 +4,7 @@ publish/
 .vs/
 *.user
 *.suo
+
+# Licensing secrets: never commit
+*.pem
+license.key
