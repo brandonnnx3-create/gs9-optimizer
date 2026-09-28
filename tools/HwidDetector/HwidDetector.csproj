@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>GS9-HWID</AssemblyName>
+    <RootNamespace>ConnectionOptimizer.HwidDetector</RootNamespace>
+    <Product>G.S.9 HWID</Product>
+    <Company>G.S.9</Company>
+    <Version>1.0.0</Version>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- Exactly the same hardware ID code as the app, so both always show the same ID. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\ConnectionOptimizer\Services\Licensing\HardwareId.cs" Link="Shared\HardwareId.cs" />
+    <Compile Include="..\..\src\ConnectionOptimizer\Services\Licensing\HardwareIdCode.cs" Link="Shared\HardwareIdCode.cs" />
+  </ItemGroup>
+
+</Project>

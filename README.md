@@ -33,6 +33,12 @@ The app only opens on PCs that have a **license signed for their hardware ID**. 
 - **License** = the hardware ID and a name, signed with an ECDSA P-256 private key. The app contains only the public key, so it can check licenses but not create them. Editing a license file breaks its signature.
 - The app looks for `license.key` in `%LOCALAPPDATA%\GS9\ConnectionOptimizer\` and next to the `.exe`. LOAD LICENSE on the lock screen copies it to the first location.
 
+**Getting a friend's hardware ID** without giving them the app: send them `GS9-HWID.exe` (`tools/HwidDetector`, about 11 MB, no .NET needed, no admin). It uses the same code as the app, shows the ID and copies it to the clipboard. Build it with:
+
+```powershell
+dotnet publish tools/HwidDetector -c Release -r win-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:PublishTrimmed=true -p:EnableCompressionInSingleFile=true -o publish/hwid
+```
+
 **Authorizing a PC** (owner only; needs the private key):
 
 ```powershell
@@ -58,6 +64,7 @@ src/ConnectionOptimizer/
   Views/                       MainWindow, LockWindow, OptimizationCell, StatusBadge, ConfirmDialog
   Themes/                      Tokens.xaml, Typography.xaml, Controls.xaml (the design system in XAML)
 tools/LicenseTool/             Owner's command-line tool: create keys and issue licenses
+tools/HwidDetector/            GS9-HWID.exe: shows a PC's hardware ID, to send before getting a license
 ```
 
 Architecture: MVVM with no external packages. The layers are UI → view models (state and flows) → services → `cmd.exe` → script.
