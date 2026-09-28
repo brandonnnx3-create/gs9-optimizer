@@ -7,7 +7,7 @@ Native Windows desktop app (C# · .NET 10 · WPF) that puts a professional inter
 - checks whether `Network_Tweaks` is active using the existing verifier script;
 - shows what is running, what finished and the exit codes, without showing or saving what the scripts print.
 
-**The optimization logic lives only in the scripts in `scripts/`.** The app runs them exactly as they are and never rewrites them.
+**The optimization logic lives only in the scripts in `scripts/`.** The app runs them exactly as they are and never rewrites them. In a build they are encrypted and embedded in the executable, so the distributed app has no visible `Scripts` folder.
 
 ## Build and run
 
@@ -60,18 +60,21 @@ src/ConnectionOptimizer/
   Models/                      OptimizationDefinition + OptimizationCatalog (which script, name, category, warnings)
   Services/                    ScriptRunner, ScriptVerifier, ScriptWindows, NetworkInfoService, Elevation (no UI code)
   Services/Licensing/          Hardware ID, license format and check
+  Services/Scripts/            Encrypted script archive: pack format and in-memory store
   ViewModels/                  MainViewModel (flows), OptimizationViewModel (one tool), Connection, Activity
   Views/                       MainWindow, LockWindow, OptimizationCell, StatusBadge, ConfirmDialog
   Themes/                      Tokens.xaml, Typography.xaml, Controls.xaml (the design system in XAML)
 tools/LicenseTool/             Owner's command-line tool: create keys and issue licenses
 tools/HwidDetector/            GS9-HWID.exe: shows a PC's hardware ID, to send before getting a license
+tools/ScriptPacker/            Build step: encrypts scripts/ into the blob embedded in the app
+build/script-key.txt           Secret AES key for the script blob (git-ignored, auto-created on build)
 ```
 
 Architecture: MVVM with no external packages. The layers are UI → view models (state and flows) → services → `cmd.exe` → script.
 
 ## How scripts are run
 
-- Each script runs through `cmd.exe /d /c "Scripts\<file>"` in a hidden console. Its output is **not read**. The UI stays responsive because everything is `async`.
+- The scripts are stored **AES-256-GCM encrypted inside the executable** (`Services/Scripts`), not as files. To run one, its exact bytes are written to a temporary file under `%TEMP%\GS9-<random>\`, run through `cmd.exe /d /c` in a hidden console, and the file and folder are deleted immediately after — in a `finally`, so also on error or timeout. Its output is **not read**. The UI stays responsive because everything is `async`.
 - **Only one script runs at a time.** Buttons are disabled while something runs, and the runner refuses a second run.
 - Every script ends with `PAUSE`. The app closes the script's input, so `PAUSE` returns immediately instead of waiting for a key. No script is modified to achieve this.
 - Result: **exit code 0 → APPLIED · unverified; any other code → ERROR.** A batch script's exit code comes from its last command, so "APPLIED" means the script ran to the end, not that every tweak took effect. Only Registry Tweaks has a verifier, so it is the only tool that can show **ACTIVE / PARTIAL / INACTIVE**.
@@ -85,7 +88,13 @@ The app starts **without** elevation (`asInvoker`). Reading the connection and c
 
 ## Replacing or updating a script
 
-Replace the file in `Scripts\`, next to the executable (or in `scripts/` before building), **keeping the same name**. Nothing else needs to change. Names, descriptions and warnings are in `Models/OptimizationCatalog.cs`.
+Because the scripts are embedded and encrypted, changing one means **rebuilding**: replace the file in `scripts/` (keep the same name) and build. The build step (`tools/ScriptPacker`) re-encrypts them into the blob. There is no longer a `Scripts\` folder to drop a file into next to the .exe. Names, descriptions and warnings are in `Models/OptimizationCatalog.cs`.
+
+## Protecting the scripts (what this does and does not do)
+
+The scripts do not appear as files and are not readable by opening the archive, the install folder, or the `.exe` with a text/strings viewer. This stops casual copying.
+
+It is **not** unbreakable, and it cannot be. The app has to decrypt the scripts to run them, so the key travels inside the executable and the decrypted bytes exist briefly as a temp file and, while running, as a visible `cmd.exe`/`reg`/`netsh`/`powershell` command line (Task Manager → Details → Command line, or Process Monitor). Someone who decompiles the .NET app can recover the key and the scripts. This raises the effort; it does not make access impossible. The AES key is in `build/script-key.txt`, git-ignored and auto-created on first build; keep a copy if you want reproducible builds.
 
 ## Known issues in the scripts (not fixed: the scripts are only changed with the owner's approval)
 

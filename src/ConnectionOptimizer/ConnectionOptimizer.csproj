@@ -11,16 +11,31 @@
     <RootNamespace>ConnectionOptimizer</RootNamespace>
     <Product>Connection Optimizer</Product>
     <Company>G.S.9</Company>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
   </PropertyGroup>
 
-  <!-- The scripts stay external: they are copied next to the executable (Scripts\) and run from there.
-       Replacing a file in Scripts\ changes the behavior without rebuilding the app. -->
+  <PropertyGroup>
+    <!-- Where the scripts, the secret key and the packed blob live during the build. -->
+    <ScriptsSourceDir>$(MSBuildProjectDirectory)\..\..\scripts</ScriptsSourceDir>
+    <ScriptKeyFile>$(MSBuildProjectDirectory)\..\..\build\script-key.txt</ScriptKeyFile>
+    <!-- Absolute and stable so the WPF markup-compile pass (which re-evaluates paths) cannot drop it in the project root. -->
+    <PackedScriptsFile>$(MSBuildProjectDirectory)\obj\gen\ProtectedScripts.bin</PackedScriptsFile>
+    <ScriptPackerProject>$(MSBuildProjectDirectory)\..\..\tools\ScriptPacker\ScriptPacker.csproj</ScriptPackerProject>
+  </PropertyGroup>
+
+  <!-- The scripts ship encrypted inside the executable (see Services/Scripts). There is no Scripts folder. -->
   <ItemGroup>
-    <None Include="..\..\scripts\*.bat;..\..\scripts\*.cmd"
-          Link="Scripts\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest"
-          CopyToPublishDirectory="PreserveNewest" />
+    <EmbeddedResource Include="$(PackedScriptsFile)" LogicalName="ConnectionOptimizer.ProtectedScripts.bin" Visible="false" />
+    <EmbeddedResource Include="$(ScriptKeyFile)" LogicalName="ConnectionOptimizer.ScriptKey.txt" Visible="false" />
   </ItemGroup>
+
+  <!-- Encrypt the scripts before they are embedded. Reruns when a script or the packer changes. -->
+  <Target Name="PackScripts"
+          BeforeTargets="PrepareForBuild;BeforeCompile;CoreCompile"
+          Inputs="$(ScriptsSourceDir)\*.bat;$(ScriptsSourceDir)\*.cmd;$(ScriptPackerProject);tools\ScriptPacker\Program.cs"
+          Outputs="$(PackedScriptsFile)">
+    <Exec Command="dotnet run --project &quot;$(ScriptPackerProject)&quot; -c Release --no-launch-profile -- &quot;$(ScriptsSourceDir)&quot; &quot;$(ScriptKeyFile)&quot; &quot;$(PackedScriptsFile)&quot;"
+          WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
 
 </Project>

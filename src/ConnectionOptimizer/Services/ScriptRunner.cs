@@ -3,16 +3,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using ConnectionOptimizer.Services.Scripts;
 
 namespace ConnectionOptimizer.Services;
 
 /// <summary>
-/// Runs the scripts from the Scripts folder through cmd.exe, one at a time.
+/// Runs the scripts held by the <see cref="ScriptStore"/> through cmd.exe, one at a time.
 /// The scripts are executed as they are: nothing is rewritten or injected.
-/// Nothing is written to disk: script output is not read at all, except for the verifier,
-/// whose output is parsed in memory and discarded.
+/// Nothing is written to disk except the temporary copy a script needs while it runs, which is deleted after.
+/// Script output is not read at all, except for the verifier, whose output is parsed in memory and discarded.
 /// </summary>
-public sealed class ScriptRunner
+public sealed class ScriptRunner(ScriptStore store)
 {
     /// <summary>How long to wait for the output pipes after cmd.exe exits (a child process may keep them open).</summary>
     private static readonly TimeSpan OutputDrainTimeout = TimeSpan.FromSeconds(3);
@@ -22,30 +23,10 @@ public sealed class ScriptRunner
     private readonly SemaphoreSlim _gate = new(1, 1);
     private volatile int _runningProcessId;
 
-    public ScriptRunner(string scriptsDirectory)
-    {
-        ScriptsDirectory = Path.GetFullPath(scriptsDirectory);
-    }
-
-    public string ScriptsDirectory { get; }
-
     /// <summary>Process id of the cmd.exe running the current script, or null when idle.</summary>
     public int? RunningProcessId => _runningProcessId == 0 ? null : _runningProcessId;
 
-    public bool Exists(string scriptFile) => File.Exists(ResolvePath(scriptFile));
-
-    /// <summary>Resolves a file name inside the Scripts folder; anything outside it is rejected.</summary>
-    public string ResolvePath(string scriptFile)
-    {
-        string fullPath = Path.GetFullPath(Path.Combine(ScriptsDirectory, scriptFile));
-        string root = Path.TrimEndingDirectorySeparator(ScriptsDirectory) + Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ArgumentException($"'{scriptFile}' is outside the Scripts folder.", nameof(scriptFile));
-        }
-
-        return fullPath;
-    }
+    public bool Exists(string scriptFile) => store.Exists(scriptFile);
 
     /// <summary>
     /// Runs a script and waits for it to finish. Only one script runs at a time.
@@ -61,7 +42,7 @@ public sealed class ScriptRunner
 
         try
         {
-            // Off the UI thread: starting cmd.exe is synchronous.
+            // Off the UI thread: writing the temp file and starting cmd.exe are synchronous.
             return await Task.Run(() => RunCoreAsync(scriptFile, captureOutput, timeout)).ConfigureAwait(false);
         }
         finally
@@ -72,12 +53,31 @@ public sealed class ScriptRunner
 
     private async Task<ScriptRunResult> RunCoreAsync(string scriptFile, bool captureOutput, TimeSpan? timeout)
     {
-        string scriptPath = ResolvePath(scriptFile);
-        if (!File.Exists(scriptPath))
+        if (!store.Exists(scriptFile))
         {
-            return ScriptRunResult.NotStarted(scriptFile, "Script file not found.");
+            return ScriptRunResult.NotStarted(scriptFile, "Script not found in the archive.");
         }
 
+        MaterializedScript script;
+        try
+        {
+            script = store.Materialize(scriptFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return ScriptRunResult.NotStarted(scriptFile, $"Could not prepare the script: {ex.Message}");
+        }
+
+        // The temp copy exists only while the script runs, and is removed here whatever happens.
+        using (script)
+        {
+            return await ExecuteAsync(scriptFile, script, captureOutput, timeout).ConfigureAwait(false);
+        }
+    }
+
+    private async Task<ScriptRunResult> ExecuteAsync(
+        string scriptFile, MaterializedScript script, bool captureOutput, TimeSpan? timeout)
+    {
         DateTime startedAt = DateTime.Now;
         var stopwatch = Stopwatch.StartNew();
         var lines = new List<string>();
@@ -88,8 +88,8 @@ public sealed class ScriptRunner
         {
             FileName = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
             // /d skips AutoRun commands. cmd strips the outer quotes and keeps the path quoted.
-            Arguments = $"/d /c \"\"{scriptPath}\"\"",
-            WorkingDirectory = ScriptsDirectory,
+            Arguments = $"/d /c \"\"{script.Path}\"\"",
+            WorkingDirectory = script.WorkingDirectory,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardInput = true,

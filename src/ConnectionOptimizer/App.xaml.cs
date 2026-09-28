@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using ConnectionOptimizer.Services;
 using ConnectionOptimizer.Services.Licensing;
+using ConnectionOptimizer.Services.Scripts;
 using ConnectionOptimizer.ViewModels;
 using ConnectionOptimizer.Views;
 
@@ -44,7 +45,7 @@ public partial class App : Application
 
     private async Task StartDashboardAsync(LicenseCheck license, string[] args)
     {
-        var runner = new ScriptRunner(Path.Combine(AppContext.BaseDirectory, "Scripts"));
+        var runner = new ScriptRunner(ScriptStore.Load());
         _activity = new ActivityLogViewModel();
         AsyncRelayCommand.UnhandledException = ex => _activity.Error($"Unexpected error · {ex.Message}");
 
