@@ -12,8 +12,9 @@ public sealed record ScriptRunResult
     public string? FailureReason { get; init; }
 
     public bool TimedOut { get; init; }
+
+    /// <summary>Only filled for the verifier; kept in memory, never shown or saved.</summary>
     public IReadOnlyList<string> Output { get; init; } = [];
-    public string? LogFilePath { get; init; }
 
     public bool Succeeded => FailureReason is null && !TimedOut && ExitCode == 0;
 

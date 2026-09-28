@@ -14,14 +14,13 @@ public partial class App : Application
     private static readonly string DataDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GS9", "ConnectionOptimizer");
 
-    private static readonly string LogsDirectory = Path.Combine(DataDirectory, "Logs");
-
     private ActivityLogViewModel? _activity;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+        DeleteOldLogs();
 
         var licensing = new LicenseService(DataDirectory);
         LicenseCheck check = licensing.Check();
@@ -45,8 +44,8 @@ public partial class App : Application
 
     private async Task StartDashboardAsync(LicenseCheck license, string[] args)
     {
-        var runner = new ScriptRunner(Path.Combine(AppContext.BaseDirectory, "Scripts"), LogsDirectory);
-        _activity = new ActivityLogViewModel(LogsDirectory);
+        var runner = new ScriptRunner(Path.Combine(AppContext.BaseDirectory, "Scripts"));
+        _activity = new ActivityLogViewModel();
         AsyncRelayCommand.UnhandledException = ex => _activity.Error($"Unexpected error · {ex.Message}");
 
         var window = new MainWindow();
@@ -67,29 +66,29 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        string? crashFile = WriteCrashLog(e.Exception);
         _activity?.Error($"Unexpected error · {e.Exception.Message}");
         MessageBox.Show(
-            $"Connection Optimizer hit an unexpected error:\n\n{e.Exception.Message}" +
-            (crashFile is null ? string.Empty : $"\n\nDetails saved to:\n{crashFile}"),
+            $"Connection Optimizer hit an unexpected error:\n\n{e.Exception.Message}",
             "G.S.9 — Connection Optimizer",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
         e.Handled = true;
     }
 
-    private static string? WriteCrashLog(Exception exception)
+    /// <summary>Versions up to 1.1 wrote script output to Logs\. Nothing is logged any more; remove what is left.</summary>
+    private static void DeleteOldLogs()
     {
         try
         {
-            Directory.CreateDirectory(LogsDirectory);
-            string file = Path.Combine(LogsDirectory, $"crash-{DateTime.Now:yyyyMMdd-HHmmss}.log");
-            File.WriteAllText(file, exception.ToString());
-            return file;
+            string logs = Path.Combine(DataDirectory, "Logs");
+            if (Directory.Exists(logs))
+            {
+                Directory.Delete(logs, recursive: true);
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return null;
+            // Best effort; retried on the next start.
         }
     }
 }

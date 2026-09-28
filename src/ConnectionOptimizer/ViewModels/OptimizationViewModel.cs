@@ -13,8 +13,6 @@ public interface IOptimizationHost
     Task CheckStatusAsync(OptimizationViewModel module);
 
     void ShowScriptWindow(OptimizationViewModel module);
-
-    void ViewLog(OptimizationViewModel module);
 }
 
 /// <summary>
@@ -37,10 +35,7 @@ public sealed class OptimizationViewModel : ObservableObject
     private bool _isChecking;
     private bool _showRunError;
     private TimeSpan _elapsed;
-    private string? _liveOutput;
-    private ScriptRunResult? _lastLog;
-    private string _lastLogKind = string.Empty;
-    private bool _lastLogIsError;
+    private string? _hint;
     private ScriptWindow? _openWindow;
 
     public OptimizationViewModel(
@@ -61,7 +56,6 @@ public sealed class OptimizationViewModel : ObservableObject
         CheckStatusCommand = new AsyncRelayCommand(
             () => host.CheckStatusAsync(this),
             () => HasVerifier && IsVerifierAvailable && !host.IsBusy);
-        ViewLogCommand = new RelayCommand(() => host.ViewLog(this), () => HasLog);
         ShowWindowCommand = new RelayCommand(() => host.ShowScriptWindow(this), () => OpenWindow is not null);
     }
 
@@ -76,7 +70,6 @@ public sealed class OptimizationViewModel : ObservableObject
 
     public ICommand ActivateCommand { get; }
     public ICommand CheckStatusCommand { get; }
-    public ICommand ViewLogCommand { get; }
     public ICommand ShowWindowCommand { get; }
 
     /// <summary>A window opened by the running script (it may be waiting for the user).</summary>
@@ -96,17 +89,14 @@ public sealed class OptimizationViewModel : ObservableObject
 
     public bool HasOpenWindow => _openWindow is not null;
 
-    /// <summary>Last meaningful line printed by the running script.</summary>
-    public string? LiveOutput
-    {
-        get => _liveOutput;
-        private set => SetProperty(ref _liveOutput, value);
-    }
+    public string LastRunDescription => _lastRun?.Describe() ?? "not run";
 
-    public ScriptRunResult? LastLog => _lastLog;
-    public string LastLogKind => _lastLogKind;
-    public bool LastLogIsError => _lastLogIsError;
-    public bool HasLog => _lastLog is not null;
+    /// <summary>Our own note while the script runs (never the script's output).</summary>
+    public string? Hint
+    {
+        get => _hint;
+        private set => SetProperty(ref _hint, value);
+    }
 
     public StatusKind StatusKind => ComputeStatus().Kind;
     public string StatusText => ComputeStatus().Text;
@@ -117,18 +107,8 @@ public sealed class OptimizationViewModel : ObservableObject
         _runState = RunState.Running;
         _showRunError = false;
         _elapsed = TimeSpan.Zero;
-        LiveOutput = Definition.RunningHint;
+        Hint = Definition.RunningHint;
         RaiseStatusChanged();
-    }
-
-    internal void ReportOutput(string line)
-    {
-        if (_runState != RunState.Running || !IsMeaningful(line))
-        {
-            return;
-        }
-
-        LiveOutput = Definition.RunningHint is { } hint ? $"{hint}  ·  {line.Trim()}" : line.Trim();
     }
 
     internal void UpdateElapsed(TimeSpan elapsed)
@@ -151,8 +131,7 @@ public sealed class OptimizationViewModel : ObservableObject
         _lastRun = result;
         _runState = result.Succeeded ? RunState.Applied : RunState.Error;
         _showRunError = !result.Succeeded;
-        LiveOutput = null;
-        SetLog(result, "SCRIPT RUN", isError: !result.Succeeded);
+        Hint = null;
         RaiseStatusChanged();
     }
 
@@ -172,7 +151,6 @@ public sealed class OptimizationViewModel : ObservableObject
             _showRunError = false;
         }
 
-        SetLog(result.Run, "STATUS CHECK", isError: result.State == VerificationState.Failed);
         RaiseStatusChanged();
     }
 
@@ -180,7 +158,7 @@ public sealed class OptimizationViewModel : ObservableObject
     {
         if (!IsScriptAvailable)
         {
-            return (StatusKind.Error, "MISSING", $"Script not found: {Definition.ScriptFile}");
+            return (StatusKind.Error, "MISSING", "Script file not found");
         }
 
         if (_runState == RunState.Running)
@@ -220,7 +198,7 @@ public sealed class OptimizationViewModel : ObservableObject
     {
         if (!IsVerifierAvailable)
         {
-            return (StatusKind.Error, "NO VERIFIER", $"Not found: {Definition.VerifierScriptFile}");
+            return (StatusKind.Error, "NO VERIFIER", "Verifier file not found");
         }
 
         if (_verification is not { } v)
@@ -244,21 +222,6 @@ public sealed class OptimizationViewModel : ObservableObject
         run.FailureReason is not null
             ? run.FailureReason
             : $"{(run.TimedOut ? "timed out" : $"exit {run.ExitCode}")} · {Format.Duration(run.Duration)} · {Format.Clock(run.StartedAt)}";
-
-    /// <summary>Skips blank lines, banners made of "=" and the PAUSE prompt.</summary>
-    private static bool IsMeaningful(string line) =>
-        line.Any(char.IsLetterOrDigit)
-        && !line.Contains("press any key", StringComparison.OrdinalIgnoreCase)
-        && !line.Contains("presione una tecla", StringComparison.OrdinalIgnoreCase);
-
-    private void SetLog(ScriptRunResult run, string kind, bool isError)
-    {
-        _lastLog = run;
-        _lastLogKind = kind;
-        _lastLogIsError = isError;
-        OnPropertyChanged(nameof(HasLog));
-        CommandManager.InvalidateRequerySuggested();
-    }
 
     private void RaiseStatusChanged()
     {

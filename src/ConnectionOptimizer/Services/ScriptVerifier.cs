@@ -28,9 +28,9 @@ public sealed class ScriptVerifier(ScriptRunner runner)
 {
     private static readonly TimeSpan VerifierTimeout = TimeSpan.FromMinutes(2);
 
-    public async Task<VerificationResult> VerifyAsync(string verifierScriptFile, string logName)
+    public async Task<VerificationResult> VerifyAsync(string verifierScriptFile)
     {
-        ScriptRunResult run = await runner.RunAsync(verifierScriptFile, logName, output: null, VerifierTimeout)
+        ScriptRunResult run = await runner.RunAsync(verifierScriptFile, captureOutput: true, VerifierTimeout)
             .ConfigureAwait(false);
         return VerifierOutputParser.Parse(run);
     }

@@ -10,7 +10,7 @@ The XAML source of truth lives in `src/ConnectionOptimizer/Themes/`:
 |---|---|
 | `Tokens.xaml` | Colors, brushes, fonts, type sizes, spacing |
 | `Typography.xaml` | Text styles (`Text.*`) |
-| `Controls.xaml` | Buttons, cells, scroll bars, tooltips, log box, converters |
+| `Controls.xaml` | Buttons, cells, scroll bars, tooltips, converters |
 
 `docs/design-reference.png` is the visual reference: use it for tone and hierarchy, not as a layout to copy.
 
@@ -59,7 +59,7 @@ Green and red are accents, never fills: no green buttons, no red backgrounds.
 | `Text.Label` | Segoe UI SemiBold | 11 | Uppercase label above a value. |
 | `Text.Body` | Segoe UI | 13 | Descriptions and explanations. |
 | `Text.Value` | Segoe UI SemiBold | 14 | Plain value next to a label. |
-| `Text.Mono` / `Text.MonoValue` | Cascadia Mono → Consolas | 12 / 16 | Exit codes, times, IPs, GUIDs, script output. |
+| `Text.Mono` / `Text.MonoValue` | Cascadia Mono → Consolas | 12 / 16 | Exit codes, times, IPs, GUIDs. |
 
 Rules:
 
@@ -118,16 +118,16 @@ Under every state there is a **mono caption** with the facts behind it, for exam
 |---|---|---|
 | `Button.Primary` | Solid white block, black Arial Black text, 72 px | ACTIVATE ALL only. |
 | `Button.PrimaryCompact` | Same look, 44 px | Confirm button in dialogs. |
-| `Button.Secondary` | 1 px white outline, inverts to white on hover | ACTIVATE, CHECK STATUS, VIEW LOG in alerts. |
-| `Button.Ghost` | Gray text, white on hover | REFRESH, VIEW LOG in cells, OPEN LOGS FOLDER. |
+| `Button.Secondary` | 1 px white outline, inverts to white on hover | ACTIVATE, CHECK STATUS, SHOW WINDOW, DISMISS. |
+| `Button.Ghost` | Gray text, white on hover | REFRESH, RUN AS ADMIN. |
 
 Disabled buttons turn to line-gray outlines. Keyboard focus is a dashed white frame.
 
-**Tool cell** (`Views/OptimizationCell`): index + category label, then name (Title), description (Body), empty space, status badge, mono caption, live output line while running, then actions.
+**Tool cell** (`Views/OptimizationCell`): index + category label, then name (Title), description (Body), empty space, status badge, mono caption, an optional hint written by the app (never the script's output), then actions.
 
-**Technical table** (CONNECTION, log header): cells divided by 1 px lines, with a label on top and a Figure or Mono value below.
+**Technical table** (CONNECTION): cells divided by 1 px lines, with a label on top and a Figure or Mono value below.
 
-**Alert strip:** a 4 px red bar on the left, `✕ OPTIMIZATION FAILED` plus the subject, a readable sentence, the technical detail in mono, then VIEW LOG and DISMISS. Never a modal pop-up for an error.
+**Alert strip:** a 4 px red bar on the left, `✕ OPTIMIZATION FAILED` plus the subject, a readable sentence, the technical detail (exit code) in mono, then DISMISS. Never a modal pop-up for an error. Script output is never shown.
 
 **Activity:** mono timestamp · glyph · message. Info messages in gray, results in white, errors in red.
 

@@ -11,7 +11,7 @@
     <RootNamespace>ConnectionOptimizer</RootNamespace>
     <Product>Connection Optimizer</Product>
     <Company>G.S.9</Company>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <!-- The scripts stay external: they are copied next to the executable (Scripts\) and run from there.

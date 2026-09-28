@@ -78,8 +78,6 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         ActivateAllCommand = new AsyncRelayCommand(ActivateAllAsync, () => !IsBusy && Modules.All(m => m.IsScriptAvailable));
         RefreshConnectionCommand = new AsyncRelayCommand(RefreshConnectionAsync);
         ElevateCommand = new RelayCommand(() => RestartElevated(string.Empty), () => !IsElevated && !IsBusy);
-        OpenLogsFolderCommand = new RelayCommand(() => _ui.OpenFolder(_runner.LogsDirectory));
-        ViewAlertLogCommand = new RelayCommand(() => ViewLog(Alert!.Module), () => Alert?.Module.HasLog == true);
         DismissAlertCommand = new RelayCommand(() => Alert = null);
 
         _clock = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -102,8 +100,6 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
     public ICommand ActivateAllCommand { get; }
     public ICommand RefreshConnectionCommand { get; }
     public ICommand ElevateCommand { get; }
-    public ICommand OpenLogsFolderCommand { get; }
-    public ICommand ViewAlertLogCommand { get; }
     public ICommand DismissAlertCommand { get; }
 
     public bool IsElevated => Elevation.IsElevated;
@@ -112,8 +108,7 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
 
     public string FooterText =>
         $"G.S.9 CONNECTION OPTIMIZER  v{Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3)}" +
-        (_licensedTo is null ? string.Empty : $"      LICENSED TO  {_licensedTo}") +
-        $"      SCRIPTS  {_runner.ScriptsDirectory}";
+        (_licensedTo is null ? string.Empty : $"      LICENSED TO  {_licensedTo}");
 
     public string NetworkCount => $"{NetworkModules.Count:00} TOOLS";
     public string CleanupCount => $"{CleanupModules.Count:00} TOOLS";
@@ -207,12 +202,12 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         Activity.Info($"Connection Optimizer started · {(IsElevated ? "administrator" : "standard user")}");
         foreach (OptimizationViewModel module in Modules.Where(m => !m.IsScriptAvailable))
         {
-            Activity.Error($"{module.Name}: script not found · {module.Definition.ScriptFile}");
+            Activity.Error($"{module.Name}: script file not found");
         }
 
         foreach (OptimizationViewModel module in Modules.Where(m => m.HasVerifier && !m.IsVerifierAvailable))
         {
-            Activity.Error($"{module.Name}: verifier not found · {module.Definition.VerifierScriptFile}");
+            Activity.Error($"{module.Name}: verifier file not found");
         }
 
         NetworkChange.NetworkAddressChanged += (_, _) => ScheduleConnectionRefresh();
@@ -293,14 +288,6 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         }
     }
 
-    public void ViewLog(OptimizationViewModel module)
-    {
-        if (module.LastLog is { } run)
-        {
-            _ui.ShowLog(LogView.From(module.Name, module.LastLogKind, run, module.LastLogIsError));
-        }
-    }
-
     private async Task ActivateAllAsync()
     {
         if (IsBusy)
@@ -369,7 +356,7 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
                 succeeded,
                 succeeded
                     ? $"{module.Name} finished with exit code 0.{RestartNote([module])}"
-                    : $"{module.Name} failed. The log shows the script output.");
+                    : $"{module.Name} failed: {module.LastRunDescription}.");
         }
     }
 
@@ -458,13 +445,12 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         _announcedWindows.Clear();
         module.MarkRunning();
         SystemDetail = $"Running {module.Name}…";
-        Activity.Info($"{module.Name} started · {module.Definition.ScriptFile}");
+        Activity.Info($"{module.Name} started");
 
         ScriptRunResult result;
         try
         {
-            var output = new Progress<string>(module.ReportOutput);
-            result = await _runner.RunAsync(module.Definition.ScriptFile, module.Definition.Id, output);
+            result = await _runner.RunAsync(module.Definition.ScriptFile);
         }
         catch (Exception ex)
         {
@@ -517,7 +503,7 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
         VerificationResult result;
         try
         {
-            result = await _verifier.VerifyAsync(module.Definition.VerifierScriptFile!, $"{module.Definition.Id}-check");
+            result = await _verifier.VerifyAsync(module.Definition.VerifierScriptFile!);
         }
         catch (Exception ex)
         {
@@ -728,9 +714,9 @@ public sealed class MainViewModel : ObservableObject, IOptimizationHost
             Label = all ? "SEQUENCE" : first.Category,
             Title = all ? "ACTIVATE ALL" : first.Name,
             Message = all
-                ? $"Runs {modules.Count} scripts one by one, in this order. Stops at the first error."
-                : $"Runs {first.Definition.ScriptFile}.",
-            Items = all ? modules.Select(m => $"{m.Number}   {m.Name}   ·   {m.Definition.ScriptFile}").ToList() : [],
+                ? $"Runs {modules.Count} optimizations one by one, in this order. Stops at the first error."
+                : $"Runs the {first.Name} optimization.",
+            Items = all ? modules.Select(m => $"{m.Number}   {m.Name}").ToList() : [],
             Warnings = warnings,
             NoteTitle = needsElevation ? "ADMINISTRATOR REQUIRED" : null,
             Note = needsElevation

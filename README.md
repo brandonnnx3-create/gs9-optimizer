@@ -5,7 +5,7 @@ Native Windows desktop app (C# · .NET 10 · WPF) that puts a professional inter
 - detects the active network adapter and shows real data: type, adapter, link speed, status, IPv4, gateway, DNS, interface GUID;
 - runs each script on its own or in sequence (ACTIVATE ALL);
 - checks whether `Network_Tweaks` is active using the existing verifier script;
-- shows what is running, what finished, the exit codes, and the full output of every run.
+- shows what is running, what finished and the exit codes, without showing or saving what the scripts print.
 
 **The optimization logic lives only in the scripts in `scripts/`.** The app runs them exactly as they are and never rewrites them.
 
@@ -55,7 +55,7 @@ src/ConnectionOptimizer/
   Services/                    ScriptRunner, ScriptVerifier, ScriptWindows, NetworkInfoService, Elevation (no UI code)
   Services/Licensing/          Hardware ID, license format and check
   ViewModels/                  MainViewModel (flows), OptimizationViewModel (one tool), Connection, Activity
-  Views/                       MainWindow, LockWindow, OptimizationCell, StatusBadge, ConfirmDialog, LogWindow
+  Views/                       MainWindow, LockWindow, OptimizationCell, StatusBadge, ConfirmDialog
   Themes/                      Tokens.xaml, Typography.xaml, Controls.xaml (the design system in XAML)
 tools/LicenseTool/             Owner's command-line tool: create keys and issue licenses
 ```
@@ -64,13 +64,13 @@ Architecture: MVVM with no external packages. The layers are UI → view models 
 
 ## How scripts are run
 
-- Each script runs through `cmd.exe /d /c "Scripts\<file>"` with its output captured. The UI stays responsive because everything is `async`.
+- Each script runs through `cmd.exe /d /c "Scripts\<file>"` in a hidden console. Its output is **not read**. The UI stays responsive because everything is `async`.
 - **Only one script runs at a time.** Buttons are disabled while something runs, and the runner refuses a second run.
 - Every script ends with `PAUSE`. The app closes the script's input, so `PAUSE` returns immediately instead of waiting for a key. No script is modified to achieve this.
 - Result: **exit code 0 → APPLIED · unverified; any other code → ERROR.** A batch script's exit code comes from its last command, so "APPLIED" means the script ran to the end, not that every tweak took effect. Only Registry Tweaks has a verifier, so it is the only tool that can show **ACTIVE / PARTIAL / INACTIVE**.
 - **Windows opened by a script** (for example the Disk Cleanup settings from `AntiInputLag.bat`) are detected while it runs. The tile switches to **◆ WINDOW OPEN**, the window is brought to the front once, and a SHOW WINDOW button brings it back. This replaces a script that looked frozen while waiting for a click.
 - The verifier runs at start-up, after every script (scripts overlap: Minecraft PvP writes some of the same values), and on **CHECK STATUS**.
-- Logs are written to `%LOCALAPPDATA%\GS9\ConnectionOptimizer\Logs\`: one file per run, plus a daily activity log.
+- **No logs.** Nothing the scripts print is shown or saved. The ACTIVITY panel lives in memory and disappears when the app closes. The verifier's output is read only to get its result, then discarded. The only file the app writes is the license. On start-up it deletes the `Logs` folder that versions up to 1.1 created.
 
 ## Administrator rights
 

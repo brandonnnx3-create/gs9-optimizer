@@ -175,10 +175,6 @@
                 <DockPanel Margin="36,16,40,16">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Style="{StaticResource Button.Secondary}"
-                                Content="{m:Tracked 'VIEW LOG'}"
-                                Command="{Binding ViewAlertLogCommand}"/>
-                        <Button Style="{StaticResource Button.Ghost}"
-                                Margin="20,0,0,0"
                                 Content="{m:Tracked DISMISS}"
                                 Command="{Binding DismissAlertCommand}"/>
                     </StackPanel>
@@ -364,7 +360,6 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <TextBlock Style="{StaticResource Text.Section}" Margin="0,0,0,16" Text="{m:Tracked ACTIVITY}"/>
@@ -408,8 +403,6 @@
                         </ScrollViewer>
                     </Border>
 
-                    <Button Grid.Row="2" Style="{StaticResource Button.Ghost}" HorizontalAlignment="Left" Margin="0,14,0,0"
-                            Content="{m:Tracked 'OPEN LOGS FOLDER →'}" Command="{Binding OpenLogsFolderCommand}"/>
                 </Grid>
             </Border>
         </Grid>

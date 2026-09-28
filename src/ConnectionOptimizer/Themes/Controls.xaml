@@ -248,32 +248,4 @@
         </Setter>
     </Style>
 
-    <!-- Read-only script output. -->
-    <Style x:Key="LogTextBox" TargetType="TextBox">
-        <Setter Property="Background" Value="{StaticResource Brush.Background}"/>
-        <Setter Property="Foreground" Value="#D8D8D8"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="FontFamily" Value="{StaticResource Font.Mono}"/>
-        <Setter Property="FontSize" Value="12"/>
-        <Setter Property="Padding" Value="32,16"/>
-        <Setter Property="IsReadOnly" Value="True"/>
-        <Setter Property="TextWrapping" Value="NoWrap"/>
-        <Setter Property="CaretBrush" Value="{StaticResource Brush.Text}"/>
-        <Setter Property="SelectionBrush" Value="{StaticResource Brush.TextSecondary}"/>
-        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
-        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="TextBox">
-                    <Border Background="{TemplateBinding Background}">
-                        <ScrollViewer x:Name="PART_ContentHost"
-                                      Padding="{TemplateBinding Padding}"
-                                      HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
-                                      VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
 </ResourceDictionary>

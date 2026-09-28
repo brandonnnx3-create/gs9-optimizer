@@ -1,4 +1,3 @@
-using System.Globalization;
 using ConnectionOptimizer.Services;
 
 namespace ConnectionOptimizer.ViewModels;
@@ -7,10 +6,6 @@ namespace ConnectionOptimizer.ViewModels;
 public interface IUiService
 {
     bool Confirm(ConfirmRequest request);
-
-    void ShowLog(LogView log);
-
-    void OpenFolder(string path);
 
     void Shutdown();
 }
@@ -31,38 +26,6 @@ public sealed record ConfirmRequest
     public bool HasWarnings => Warnings.Count > 0;
 }
 
-public sealed record LogView
-{
-    public required string WindowTitle { get; init; }
-    public required string Label { get; init; }
-    public required string Title { get; init; }
-    public required string Script { get; init; }
-    public required string Started { get; init; }
-    public required string Duration { get; init; }
-    public required string Result { get; init; }
-    public bool IsError { get; init; }
-    public string? LogFile { get; init; }
-    public required string Output { get; init; }
-
-    public static LogView From(string moduleName, string kind, ScriptRunResult run, bool isError) => new()
-    {
-        WindowTitle = $"G.S.9 — {moduleName} — {kind}",
-        Label = kind,
-        Title = moduleName,
-        Script = run.ScriptFile,
-        Started = run.StartedAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture),
-        Duration = Format.Duration(run.Duration),
-        Result = run.FailureReason is not null ? "NOT STARTED"
-            : run.TimedOut ? "TIMED OUT"
-            : $"EXIT CODE {run.ExitCode}",
-        IsError = isError,
-        LogFile = run.LogFilePath,
-        Output = run.FailureReason is not null ? run.FailureReason
-            : run.Output.Count == 0 ? "(the script printed nothing)"
-            : string.Join(Environment.NewLine, run.Output),
-    };
-}
-
 /// <summary>The error banner: readable first, technical detail second.</summary>
 public sealed record AlertViewModel
 {
@@ -76,12 +39,12 @@ public sealed record AlertViewModel
     {
         Module = module,
         Title = "OPTIMIZATION FAILED",
-        Subject = $"{module.Name}  ·  {module.Definition.ScriptFile}",
+        Subject = module.Name,
         Message = result switch
         {
             { FailureReason: not null } => "The script could not be started.",
             { TimedOut: true } => "The script did not finish in time and was stopped.",
-            _ => "The script ended with an error code. Open the log to see which command failed.",
+            _ => "The script ended with an error code: at least one of its commands failed.",
         },
         Detail = result.FailureReason ?? (result.TimedOut ? "Timed out" : $"Exit code: {result.ExitCode}"),
     };
