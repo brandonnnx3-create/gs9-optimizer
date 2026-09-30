@@ -10,7 +10,7 @@ public static class AccessConfig
     /// Raw URL of the signed allowlist (e.g. a GitHub gist "raw" link). Set this before shipping a build.
     /// While it is the placeholder, the app cannot verify access and will stay locked.
     /// </summary>
-    public const string AllowlistUrl = "https://REPLACE-WITH-YOUR-GIST-RAW-URL";
+    public const string AllowlistUrl = "https://raw.githubusercontent.com/brandonnnx3-create/gs9-optimizer/access/allowlist.signed";
 
     /// <summary>How long the app keeps working offline after the last successful check, before it must reconnect.</summary>
     public static readonly TimeSpan GracePeriod = TimeSpan.FromDays(3);
