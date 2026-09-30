@@ -131,7 +131,7 @@ Disabled buttons turn to line-gray outlines. Keyboard focus is a dashed white fr
 
 **Activity:** mono timestamp · glyph · message. Info messages in gray, results in white, errors in red.
 
-**Lock screen** (`Views/LockWindow`): the brand, `THIS PC IS NOT AUTHORIZED`, the hardware ID in large mono inside a white frame with COPY, and LOAD LICENSE as the only primary button. It shows red text only when a license was rejected. A missing license is a normal first run, not an error.
+**Lock screen** (`Views/LockWindow`): the brand, a headline (`CHECKING ACCESS…`, `THIS PC IS NOT AUTHORIZED`, `ACCESS EXPIRED`, `COULD NOT VERIFY ACCESS`), the hardware ID in large mono inside a white frame with COPY, and RE-CHECK ACCESS as the only primary button. Red text only for a real problem (expired, unverifiable); "not authorized" is neutral, not an error.
 
 **Dialogs:** black window with a native dark title bar. Contents top to bottom: label, big title, message, optional list, "WHAT WILL HAPPEN", optional boxed note, then CANCEL (secondary) and the confirm button (primary).
 

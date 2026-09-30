@@ -9,41 +9,45 @@ using ConnectionOptimizer.Views;
 
 namespace ConnectionOptimizer;
 
-/// <summary>Composition root: checks the license, then builds the services and the main window.</summary>
+/// <summary>Composition root: checks online access, then builds the services and the main window.</summary>
 public partial class App : Application
 {
     private static readonly string DataDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GS9", "ConnectionOptimizer");
 
     private ActivityLogViewModel? _activity;
+    private string[] _args = [];
+    private bool _dashboardStarted;
 
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnDispatcherUnhandledException;
-        DeleteOldLogs();
+        DeleteOldData();
+        _args = e.Args;
 
-        var licensing = new LicenseService(DataDirectory);
-        LicenseCheck check = licensing.Check();
-        if (check.IsValid)
+        // The dashboard is not created until the online check confirms this PC is authorized.
+        var lockWindow = new LockWindow(new AccessController(DataDirectory));
+        lockWindow.Granted += OnAccessGranted;
+        MainWindow = lockWindow;
+        lockWindow.Show();
+        _ = lockWindow.RunCheckAsync();
+    }
+
+    private async void OnAccessGranted(object? sender, AccessResult access)
+    {
+        if (_dashboardStarted)
         {
-            await StartDashboardAsync(check, e.Args);
             return;
         }
 
-        // Nothing else is created until this PC has a valid license.
-        var lockWindow = new LockWindow(licensing, check);
-        lockWindow.Unlocked += async (_, unlocked) =>
-        {
-            Task start = StartDashboardAsync(unlocked, e.Args); // Becomes the main window before the lock closes.
-            lockWindow.Close();
-            await start;
-        };
-        MainWindow = lockWindow;
-        lockWindow.Show();
+        _dashboardStarted = true;
+        var lockWindow = sender as LockWindow;
+        await StartDashboardAsync(access);
+        lockWindow?.Close();
     }
 
-    private async Task StartDashboardAsync(LicenseCheck license, string[] args)
+    private async Task StartDashboardAsync(AccessResult access)
     {
         var runner = new ScriptRunner(ScriptStore.Load());
         _activity = new ActivityLogViewModel();
@@ -56,13 +60,13 @@ public partial class App : Application
             new NetworkInfoService(),
             new UiService(window),
             _activity,
-            license.LicensedTo);
+            access.Name);
 
         window.DataContext = viewModel;
         MainWindow = window;
         window.Show();
 
-        await viewModel.InitializeAsync(StartupRequest.Parse(args));
+        await viewModel.InitializeAsync(StartupRequest.Parse(_args));
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
@@ -76,20 +80,26 @@ public partial class App : Application
         e.Handled = true;
     }
 
-    /// <summary>Versions up to 1.1 wrote script output to Logs\. Nothing is logged any more; remove what is left.</summary>
-    private static void DeleteOldLogs()
+    /// <summary>Remove data written by earlier versions (script-output logs, per-PC license files).</summary>
+    private static void DeleteOldData()
     {
-        try
+        foreach (string path in new[] { Path.Combine(DataDirectory, "Logs"), Path.Combine(DataDirectory, "license.key") })
         {
-            string logs = Path.Combine(DataDirectory, "Logs");
-            if (Directory.Exists(logs))
+            try
             {
-                Directory.Delete(logs, recursive: true);
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, recursive: true);
+                }
+                else if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
             }
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // Best effort; retried on the next start.
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Best effort; retried on the next start.
+            }
         }
     }
 }

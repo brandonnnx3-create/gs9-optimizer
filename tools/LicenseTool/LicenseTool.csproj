@@ -9,8 +9,9 @@
     <RootNamespace>ConnectionOptimizer.LicenseTool</RootNamespace>
   </PropertyGroup>
 
-  <!-- Same license format and hardware ID rules as the app. -->
+  <!-- Same allowlist format and hardware-ID rules as the app. -->
   <ItemGroup>
+    <Compile Include="..\..\src\ConnectionOptimizer\Services\Licensing\Allowlist.cs" Link="Shared\Allowlist.cs" />
     <Compile Include="..\..\src\ConnectionOptimizer\Services\Licensing\LicenseFormat.cs" Link="Shared\LicenseFormat.cs" />
     <Compile Include="..\..\src\ConnectionOptimizer\Services\Licensing\HardwareIdCode.cs" Link="Shared\HardwareIdCode.cs" />
   </ItemGroup>

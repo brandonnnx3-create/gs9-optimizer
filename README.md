@@ -5,6 +5,7 @@ Native Windows desktop app (C# · .NET 10 · WPF) that puts a professional inter
 - detects the active network adapter and shows real data: type, adapter, link speed, status, IPv4, gateway, DNS, interface GUID;
 - runs each script on its own or in sequence (ACTIVATE ALL);
 - checks whether `Network_Tweaks` is active using the existing verifier script;
+- gates access with a revocable online allowlist keyed to each PC's hardware ID;
 - shows what is running, what finished and the exit codes, without showing or saving what the scripts print.
 
 **The optimization logic lives only in the scripts in `scripts/`.** The app runs them exactly as they are and never rewrites them. In a build they are encrypted and embedded in the executable, so the distributed app has no visible `Scripts` folder.
@@ -25,31 +26,35 @@ dotnet publish src/ConnectionOptimizer -p:PublishProfile=win-x64
 
 `publish/ConnectionOptimizer/` then contains a single `ConnectionOptimizer.exe` (about 65 MB, with the .NET runtime inside) and the `Scripts\` folder. Keep them together. The first launch unpacks a few native files to `%TEMP%\.net\`, so it is a little slower than later launches.
 
-## Private access (hardware ID)
+## Private access (online allowlist, revocable)
 
-The app only opens on PCs that have a **license signed for their hardware ID**. On any other PC it shows a lock screen with that PC's hardware ID.
+The app opens only on PCs whose **hardware ID is on a signed allowlist** the owner hosts online. At startup the app downloads the list, checks the signature and its own hardware ID, and shows a lock screen otherwise. Because it checks online, the owner can **revoke** a PC at any time by removing it from the list.
 
-- **Hardware ID** = hash of the motherboard UUID + motherboard serial (SMBIOS) + the Windows `MachineGuid`, shown as `XXXX-XXXX-XXXX-XXXX`. It changes if Windows is reinstalled or the motherboard is replaced; that PC then needs a new license.
-- **License** = the hardware ID and a name, signed with an ECDSA P-256 private key. The app contains only the public key, so it can check licenses but not create them. Editing a license file breaks its signature.
-- The app looks for `license.key` in `%LOCALAPPDATA%\GS9\ConnectionOptimizer\` and next to the `.exe`. LOAD LICENSE on the lock screen copies it to the first location.
+- **Hardware ID** = hash of the motherboard UUID + motherboard serial (SMBIOS) + the Windows `MachineGuid`, shown as `XXXX-XXXX-XXXX-XXXX`. It changes if Windows is reinstalled or the motherboard is replaced.
+- **Allowlist** = a signed file listing each authorized hardware ID, a name, and an optional expiry, signed with an ECDSA P-256 private key. The app has only the public key, so it can verify the list but not forge it. Editing the list breaks its signature.
+- **Hosting**: the list lives at a URL the owner controls (e.g. a GitHub gist "raw" link), baked into the build at `Services/Licensing/AccessConfig.cs` (`AllowlistUrl`). It is baked in on purpose — if it could be changed on the user's PC, a revoked user could point it at an old copy and dodge the revocation.
+- **Offline grace**: after a successful check the result is cached; the app keeps working offline for `GracePeriod` (3 days) before it must reconnect. So a brief outage does not lock people out, and a revocation takes effect within 3 days even if the PC is kept offline (immediately if it is online).
 
-**Getting a friend's hardware ID** without giving them the app: send them `GS9-HWID.exe` (`tools/HwidDetector`, about 11 MB, no .NET needed, no admin). It uses the same code as the app, shows the ID and copies it to the clipboard. Build it with:
+**Getting a PC's hardware ID** before authorizing it: send `GS9-HWID.exe` (`tools/HwidDetector`, ~11 MB, no .NET, no admin). It shows the ID and copies it to the clipboard.
 
 ```powershell
 dotnet publish tools/HwidDetector -c Release -r win-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:PublishTrimmed=true -p:EnableCompressionInSingleFile=true -o publish/hwid
 ```
 
-**Authorizing a PC** (owner only; needs the private key):
+**Managing access** (owner only; needs the private key). These update `allowlist.json` (kept by the owner) and write `allowlist.signed`, which the owner uploads to the gist:
 
 ```powershell
-dotnet run --project tools/LicenseTool -- issue gs9-license-private.pem XXXX-XXXX-XXXX-XXXX "PC name"
+dotnet run --project tools/LicenseTool -- allow add    key.pem XXXX-XXXX-XXXX-XXXX "PC name" [YYYY-MM-DD]
+dotnet run --project tools/LicenseTool -- allow remove key.pem XXXX-XXXX-XXXX-XXXX     # revokes that PC
+dotnet run --project tools/LicenseTool -- allow list   key.pem
 ```
 
-This writes `license.key`. Send that file to the PC's user, who loads it on the lock screen.
+**First-time setup**: `keygen` a key pair, paste the public key into `LicensePublicKey.cs`, set `AllowlistUrl` in `AccessConfig.cs` to the gist raw URL, build the allowlist with the owner's own hardware ID, upload `allowlist.signed`, then build and distribute the app.
 
-**Changing keys:** `dotnet run --project tools/LicenseTool -- keygen new-private.pem`, paste the printed public key into `Services/Licensing/LicensePublicKey.cs` and rebuild. All existing licenses stop working. Never commit a private key: `*.pem` and `license.key` are git-ignored.
-
-**Limits:** this stops the app from opening on unlicensed PCs. It does not stop someone who decompiles the .NET app and removes the check, and **it does not protect the scripts**: they are plain files in `Scripts\` and can be run without the app.
+**Limits (unchanged and important):**
+- Revocation works only on this build (1.4.0+). Copies of older builds (which had no online check) cannot be revoked.
+- It does not stop someone who decompiles the .NET app and removes the check. Blocking the URL only helps them for the grace period, after which the app locks.
+- Never commit the private key: `*.pem`, `allowlist.json` and `allowlist.signed` are git-ignored.
 
 ## Project structure
 
